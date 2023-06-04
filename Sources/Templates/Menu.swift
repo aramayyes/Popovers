@@ -363,7 +363,11 @@ public extension Templates {
                 .gesture(
                     DragGesture(minimumDistance: 0, coordinateSpace: .global)
                         .onChanged { value in
+                            let hoveringOldIndex = model.hoveringIndex
                             model.hoveringIndex = model.getIndex(from: value.location)
+                            if hoveringOldIndex != model.hoveringIndex {
+                                UIImpactFeedbackGenerator().impactOccurred()
+                            }
 
                             /// Rubber-band the menu.
                             withAnimation {
