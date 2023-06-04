@@ -302,7 +302,7 @@ public extension Templates {
 
         var body: some View {
             PopoverReader { context in
-                ScrollView {}
+                ScrollView {
                     VStack(spacing: 0) {
                         ForEach(content.indices, id: \.self) { index in
                             content[index]
