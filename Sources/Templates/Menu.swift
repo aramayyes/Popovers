@@ -17,12 +17,16 @@ public extension Templates {
         public var labelFadeAnimation = Animation.default /// The animation used when calling the `fadeLabel`.
         public var clipContent = true /// Replicate the system's default clipping animation.
         public var sourceFrameInset = UIEdgeInsets(top: -8, left: -8, bottom: -8, right: -8)
+        /// Padding to prevent the popover from overflowing off the screen.
+        public var screenEdgePadding: UIEdgeInsets?
         public var originAnchor = Popover.Attributes.Position.Anchor.bottom /// The label's anchor.
         public var popoverAnchor = Popover.Attributes.Position.Anchor.top /// The menu's anchor.
         public var scaleAnchor: Popover.Attributes.Position.Anchor? /// If nil, the anchor will be automatically picked.
         public var excludedFrames: (() -> [CGRect]) = { [] }
         public var menuBlur = UIBlurEffect.Style.prominent
         public var width: CGFloat? = CGFloat(240) /// If nil, hug the content.
+        public var fixedSizeHorizontal: Bool = true
+        public var fixedSizeVertical: Bool = true
         public var cornerRadius = CGFloat(14)
         public var showDivider = true /// Show divider between menu items.
         public var shadow = Shadow.system
@@ -37,12 +41,15 @@ public extension Templates {
             dismissalAnimation: Animation = .spring(response: 0.4, dampingFraction: 0.9, blendDuration: 1),
             labelFadeAnimation: Animation = .easeOut,
             sourceFrameInset: UIEdgeInsets = .init(top: -8, left: -8, bottom: -8, right: -8),
+            screenEdgePadding: UIEdgeInsets? = nil,
             originAnchor: Popover.Attributes.Position.Anchor = .bottom,
             popoverAnchor: Popover.Attributes.Position.Anchor = .top,
             scaleAnchor: Popover.Attributes.Position.Anchor? = nil,
             excludedFrames: @escaping (() -> [CGRect]) = { [] },
             menuBlur: UIBlurEffect.Style = .prominent,
             width: CGFloat? = CGFloat(240),
+            fixedSizeHorizontal: Bool = true,
+            fixedSizeVertical: Bool = true,
             cornerRadius: CGFloat = CGFloat(14),
             showDivider: Bool = true,
             shadow: Shadow = .system,
@@ -55,12 +62,15 @@ public extension Templates {
             self.dismissalAnimation = dismissalAnimation
             self.labelFadeAnimation = labelFadeAnimation
             self.sourceFrameInset = sourceFrameInset
+            self.screenEdgePadding = screenEdgePadding
             self.originAnchor = originAnchor
             self.popoverAnchor = popoverAnchor
             self.scaleAnchor = scaleAnchor
             self.excludedFrames = excludedFrames
             self.menuBlur = menuBlur
             self.width = width
+            self.fixedSizeHorizontal = fixedSizeHorizontal
+            self.fixedSizeVertical = fixedSizeVertical
             self.cornerRadius = cornerRadius
             self.showDivider = showDivider
             self.shadow = shadow
@@ -126,6 +136,23 @@ public extension Templates {
             self.label = label
         }
 
+        public init(
+          present: Binding<Bool> = .constant(false),
+          configuration buildConfiguration: @escaping (
+            (inout MenuConfiguration)
+              -> Void
+          ) = { _ in },
+          contents: @escaping () -> [AnyView],
+          @ViewBuilder label: @escaping (Bool) -> Label
+        ) {
+          _overridePresent = present
+          var configuration = MenuConfiguration()
+          buildConfiguration(&configuration)
+          self.configuration = configuration
+          content = contents()
+          self.label = label
+        }
+        
         /**
          A built-from-scratch version of the system menu, for SwiftUI.
          This initializer lets you pass in a single menu item.
@@ -187,6 +214,7 @@ public extension Templates {
                                     window: window,
                                     labelPressedWhenAlreadyPresented: &labelPressedWhenAlreadyPresented
                                 ) { present in
+                                    UIApplication.shared.dismissKeyboard()
                                     model.present = present
                                 } fadeLabel: { fade in
                                     fadeLabel = fade
@@ -205,6 +233,7 @@ public extension Templates {
                     }
                     .onValueChange(of: overridePresent) { _, present in
                         if present != model.present {
+                            UIApplication.shared.dismissKeyboard()
                             model.present = present
                             withAnimation(configuration.labelFadeAnimation) {
                                 fadeLabel = present
@@ -215,6 +244,9 @@ public extension Templates {
                         present: $model.present,
                         attributes: {
                             $0.position = .absolute(originAnchor: configuration.originAnchor, popoverAnchor: configuration.popoverAnchor)
+                            if let edgePadding = configuration.screenEdgePadding {
+                                $0.screenEdgePadding = edgePadding
+                            }
                             $0.rubberBandingMode = .none
                             $0.dismissal.excludedFrames = {
                                 [
@@ -270,41 +302,64 @@ public extension Templates {
 
         var body: some View {
             PopoverReader { context in
-                VStack(spacing: 0) {
-                    ForEach(content.indices) { index in
-                        content[index]
+                ScrollView {}
+                    VStack(spacing: 0) {
+                        ForEach(content.indices, id: \.self) { index in
+                            content[index]
 
-                            /// Inject index and model.
-                            .environment(\.index, index)
-                            .environmentObject(model)
+                                /// Inject index and model.
+                                .environment(\.index, index)
+                                .environmentObject(model)
 
-                            /// Work with frames.
-                            .frame(maxWidth: .infinity)
-                            .contentShape(Rectangle())
+                                /// Work with frames.
+                                .frame(maxWidth: .infinity)
+                                .contentShape(Rectangle())
 
-                            /// Use `sizeReader` to prevent interfering with the scale effect.
-                            .sizeReader { size in
-                                if let firstIndex = model.sizes.firstIndex(where: { $0.index == index }) {
-                                    model.sizes[firstIndex].size = size
-                                } else {
-                                    model.sizes.append(MenuItemSize(index: index, size: size))
+                                /// Use `sizeReader` to prevent interfering with the scale effect.
+                                .sizeReader { size in
+                                    if let firstIndex = model.sizes.firstIndex(where: { $0.index == index }) {
+                                        model.sizes[firstIndex].size = size
+                                    } else {
+                                        model.sizes.append(MenuItemSize(index: index, size: size))
+                                    }
                                 }
-                            }
+                                .highPriorityGesture(TapGesture().onEnded {
+                                    model.selectedIndex = index
+                                })
 
-                        if configuration.showDivider, index != content.count - 1 {
-                            Rectangle()
-                                .fill(Color(UIColor.label))
-                                .frame(height: 0.4)
-                                .opacity(0.3)
+                            if configuration.showDivider, index != content.count - 1 {
+                                Rectangle()
+                                    .fill(Color(UIColor.label))
+                                    .frame(height: 0.4)
+                                    .opacity(0.3)
+                            }
                         }
                     }
-                }
-                .frame(width: configuration.width)
-                .fixedSize() /// Hug the width of the inner content.
+                    .frame(width: configuration.width)
+                }   
+                .if(true) { view in
+                    Group {
+                        if #available(iOS 16.4, *) {
+                            view
+                                .scrollBounceBehavior(.basedOnSize)
+                        } else {
+                            view
+                                .introspectScrollView { scrollView in
+                                    scrollView.alwaysBounceVertical = false
+                                }
+                        }
+                    }
+                } 
+                .frame(maxHeight: UIScreen.screenHeight * 0.5)
+                .fixedSize(
+                    horizontal: configuration.fixedSizeHorizontal,
+                    vertical: configuration.fixedSizeVertical
+                ) 
                 .modifier(ClippedBackgroundModifier(context: context, configuration: configuration, expanded: expanded)) /// Clip the content if desired.
                 .scaleEffect(expanded ? 1 : 0.2, anchor: configuration.scaleAnchor?.unitPoint ?? model.getScaleAnchor(from: context))
                 .scaleEffect(model.scale, anchor: configuration.scaleAnchor?.unitPoint ?? model.getScaleAnchor(from: context))
-                .simultaneousGesture(
+                .onTapGesture {}
+                .gesture(
                     DragGesture(minimumDistance: 0, coordinateSpace: .global)
                         .onChanged { value in
                             model.hoveringIndex = model.getIndex(from: value.location)
@@ -511,4 +566,44 @@ extension EnvironmentValues {
 
         static var defaultValue: Int? = nil
     }
+}
+
+internal extension UIApplication {
+  func dismissKeyboard() {
+    sendAction(
+      #selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil
+    )
+  }
+}
+
+internal extension View {
+  func `if`(
+    _ condition: @autoclosure () -> Bool,
+    transform: (Self) -> Self
+  ) -> Self {
+    var result = self
+    if condition() {
+      result = transform(self)
+    }
+
+    return result
+  }
+
+  @ViewBuilder
+  func `if`(
+    _ condition: @autoclosure () -> Bool,
+    transform: (Self) -> some View
+  ) -> some View {
+    if condition() {
+      transform(self)
+    } else {
+      self
+    }
+  }
+}
+
+internal extension UIScreen {
+  static let screenWidth = UIScreen.main.bounds.size.width
+  static let screenHeight = UIScreen.main.bounds.size.height
+  static let screenSize = UIScreen.main.bounds.size
 }
