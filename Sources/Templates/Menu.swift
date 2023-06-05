@@ -304,7 +304,7 @@ public extension Templates {
         var body: some View {
             PopoverReader { context in
                 ScrollView {
-                    VStack(spacing: 0) {
+                    LazyVStack(spacing: 0) {
                         ForEach(content.indices, id: \.self) { index in
                             content[index]
 
