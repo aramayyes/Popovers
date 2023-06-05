@@ -289,6 +289,8 @@ public extension Templates {
         /// For the scale animation.
         @State var expanded = false
 
+        @State private var scrollViewContentSize: CGSize = .zero
+
         init(
             model: MenuModel,
             present: @escaping (Bool) -> Void,
@@ -304,7 +306,7 @@ public extension Templates {
         var body: some View {
             PopoverReader { context in
                 ScrollView {
-                    LazyVStack(spacing: 0) {
+                    VStack(spacing: 0) {
                         ForEach(content.indices, id: \.self) { index in
                             content[index]
 
@@ -337,6 +339,14 @@ public extension Templates {
                         }
                     }
                     .frame(width: configuration.width)
+                    .background(
+                        GeometryReader { geo -> Color in
+                            DispatchQueue.main.async {
+                                scrollViewContentSize = geo.size
+                            }
+                            return Color.clear
+                        }
+                    )
                 }   
                 .if(true) { view in
                     Group {
@@ -351,11 +361,11 @@ public extension Templates {
                         }
                     }
                 } 
-                .frame(maxHeight: UIScreen.screenHeight * 0.5)
+                .frame(maxHeight: min(scrollViewContentSize.height, UIScreen.screenHeight * 0.5))
                 .fixedSize(
                     horizontal: configuration.fixedSizeHorizontal,
                     vertical: configuration.fixedSizeVertical
-                ) 
+                )
                 .modifier(ClippedBackgroundModifier(context: context, configuration: configuration, expanded: expanded)) /// Clip the content if desired.
                 .scaleEffect(expanded ? 1 : 0.2, anchor: configuration.scaleAnchor?.unitPoint ?? model.getScaleAnchor(from: context))
                 .scaleEffect(model.scale, anchor: configuration.scaleAnchor?.unitPoint ?? model.getScaleAnchor(from: context))
