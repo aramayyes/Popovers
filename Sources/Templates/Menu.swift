@@ -289,7 +289,7 @@ public extension Templates {
         /// For the scale animation.
         @State var expanded = false
 
-        @State private var scrollViewContentSize: CGSize = .zero
+        @State private var scrollViewContentSize: CGSize?
 
         init(
             model: MenuModel,
@@ -360,8 +360,9 @@ public extension Templates {
                                 }
                         }
                     }
-                } 
-                .frame(maxHeight: min(scrollViewContentSize.height, UIScreen.screenHeight * 0.5))
+                }
+                .frame(minHeight: min(scrollViewContentSize?.height ?? 0, UIScreen.screenHeight * 0.5))
+                .frame(maxHeight: UIScreen.screenHeight * 0.5)
                 .fixedSize(
                     horizontal: configuration.fixedSizeHorizontal,
                     vertical: configuration.fixedSizeVertical
