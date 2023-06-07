@@ -331,9 +331,8 @@ public extension Templates {
                                 })
 
                             if configuration.showDivider, index != content.count - 1 {
-                                Rectangle()
-                                    .fill(Color(UIColor.label))
-                                    .frame(height: 0.4)
+                                Divider()
+                                    .background(Color(UIColor.label))
                                     .opacity(0.3)
                             }
                         }
