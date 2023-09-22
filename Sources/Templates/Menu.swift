@@ -6,7 +6,7 @@
 //  Copyright © 2022 A. Zheng. All rights reserved.
 //
 
-import Introspect
+import SwiftUIIntrospect
 import SwiftUI
 
 public extension Templates {
@@ -354,7 +354,7 @@ public extension Templates {
                                 .scrollBounceBehavior(.basedOnSize)
                         } else {
                             view
-                                .introspectScrollView { scrollView in
+                                .introspect(.scrollView, on: .iOS(.v15, .v16, .v17)) { scrollView in
                                     scrollView.alwaysBounceVertical = false
                                 }
                         }
