@@ -29,7 +29,7 @@ let package = Package(
         .target(
             name: "Popovers",
             dependencies: [.product(
-                name: "Introspect",
+                name: "SwiftUIIntrospect",
                 package: "SwiftUI-Introspect"
             )],
             path: "Sources"
