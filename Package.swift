@@ -20,7 +20,7 @@ let package = Package(
         // .package(url: /* package url */, from: "1.0.0"),
          .package(
             url: "https://github.com/siteline/SwiftUI-Introspect",
-            from: "0.5.1"
+            from: "1.0.0"
         ),
     ],
     targets: [
