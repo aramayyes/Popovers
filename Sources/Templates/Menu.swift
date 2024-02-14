@@ -229,6 +229,9 @@ public extension Templates {
                                 model.selectedIndex = nil
                                 model.hoveringIndex = nil
                             }
+                        }
+                                                       
+                        if overridePresent != present {
                             overridePresent = present
                         }
                     }
