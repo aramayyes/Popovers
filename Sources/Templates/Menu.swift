@@ -101,7 +101,7 @@ public extension Templates {
         @State var dragLocation: CGPoint?
 
         /// View model for the menu buttons.
-        @ObservedObject var model = MenuModel()
+        @StateObject var model = MenuModel()
 
         /// Allow presenting from an external view via `$present`.
         @Binding var overridePresent: Bool
