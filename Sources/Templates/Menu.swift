@@ -256,6 +256,11 @@ public extension Templates {
                                     + configuration.excludedFrames()
                             }
                             $0.sourceFrameInset = configuration.sourceFrameInset
+                            // Prevent views underneath the popover from being pressed and dismiss the popover on tap outside.
+                            $0.blocksBackgroundTouches = true
+                            $0.onTapOutside = {
+                                model.present = false
+                            }
                         }
                     ) {
                         MenuView(
